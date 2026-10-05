@@ -1,246 +1,269 @@
-# Persistência de Dados com Prisma + SQLite
+# Tutorial de Persistência de Dados com Prisma e SQLite
 
-Guia passo a passo para implementar persistência de dados em uma aplicação **Node.js + Express**, mostrando a diferença entre armazenar dados em memória utilizando um array e armazená-los de forma permanente utilizando **SQLite + Prisma**.
+## 1. Objetivo
+
+Este tutorial apresenta a implementação da persistência de dados em uma aplicação Express, mostrando a evolução do armazenamento em memória, utilizando um array, para o armazenamento permanente com SQLite e Prisma.
+
+O tutorial apresenta as alterações necessárias e explica resumidamente a função de cada etapa.
 
 ---
 
-## 1° Passo — Instalação das Dependências
-
-Execute os comandos abaixo na raiz do projeto:
-
-# Instalação do Prisma e do Prisma Client
-npm install prisma@7.10.0 @prisma/client@7.10.0
-
-# Driver do SQLite e adaptador utilizado pelo Prisma
-npm install better-sqlite3 @prisma/adapter-better-sqlite3
-Para que serve cada dependência?
-Dependência	Função
-prisma	Ferramenta ORM utilizada para trabalhar com o banco de dados
-@prisma/client	Permite realizar operações no banco através do código JavaScript
-better-sqlite3	Driver utilizado para comunicação com o SQLite
-@prisma/adapter-better-sqlite3	Adaptador que conecta o Prisma ao Better SQLite3
-
-## 2° Passo — Inicializando o Prisma
-
-Execute:
-
-npx prisma init --datasource-provider sqlite
-
-Esse comando cria a estrutura inicial necessária para utilizar o Prisma com SQLite.
-
-Após a inicialização, teremos arquivos como:
-
-prisma/
- └── schema.prisma
-
-.env
-prisma7.config.ts
-
-## 3° Passo — Configurando o banco de dados
-
-No arquivo .env, configure a URL do banco:
-
-DATABASE_URL="file:./dev.db"
-
-O arquivo .env armazena configurações utilizadas pela aplicação.
-
-Nesse projeto, DATABASE_URL informa onde está localizado o banco SQLite.
-
-## 4° Passo — Criando o Schema
-
-No arquivo:
-
-prisma/schema.prisma
-
-Defina o modelo Usuario:
-
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider = "sqlite"
-}
-
-model Usuario {
-  id    Int    @id @default(autoincrement())
-  nome  String
-  email String @unique
-}
-Estrutura do modelo
-Campo	Tipo	Função
-id	Int	Identificador do usuário
-nome	String	Nome do usuário
-email	String	E-mail do usuário
-Propriedades importantes
-@id
-
-Define o campo como identificador principal.
-
-@default(autoincrement())
-
-Faz o ID ser gerado automaticamente.
-
-@unique
-
-Impede que dois usuários tenham o mesmo e-mail.
-
-## 5° Passo — Criando a Migration
-
-Depois de definir o modelo, execute:
-
-npx prisma migrate dev --name inicial
-
-A migration pega a estrutura definida no schema.prisma e aplica essa estrutura no banco de dados.
-
-Ela também mantém um histórico das alterações realizadas no banco.
-
-Depois disso, será criado o banco SQLite:
-
-dev.db
-6° Passo — Gerando o Prisma Client
-
-Execute:
-
-npx prisma generate
-
-O comando gera o Prisma Client, que será utilizado no código para realizar operações no banco.
-
-Com ele podemos utilizar métodos como:
-
-create()
-findMany()
-update()
-delete()
-7° Passo — Criando a conexão com o Prisma
-
-Crie o arquivo:
-
-lib/prisma.js
-
-Com o seguinte conteúdo:
-
-require('dotenv').config();
-
-const { PrismaClient } = require('@prisma/client');
-const { PrismaBetterSqlite3 } = require('@prisma/adapter-better-sqlite3');
-
-const adapter = new PrismaBetterSqlite3({
-    url: process.env.DATABASE_URL
-});
-
-const prisma = new PrismaClient({
-    adapter
-});
-
-module.exports = prisma;
-O que foi feito?
-
-Esse arquivo configura a conexão entre a aplicação, o Prisma e o banco SQLite.
-
-Depois, o objeto prisma é exportado para ser utilizado no teste.js.
-
-8° Passo — Alterando o teste.js
+## 2. Situação inicial
 
 Inicialmente, os usuários eram armazenados em um array:
 
-let usuarios = [
-    {
-        id: 1,
-        nome: "Clara Araújo"
-    },
-    {
-        id: 2,
-        nome: "Lyvia Niedja"
-    },
-    {
-        id: 23,
-        nome: "Daniel prof gatão"
-    }
-];
+    let usuarios = [
+        { id: 1, nome: "Clara Araújo" },
+        { id: 2, nome: "Lyvia Niedja" },
+        { id: 23, nome: "Daniel prof gatão" }
+    ];
 
 Esse tipo de armazenamento funciona apenas enquanto o servidor está executando.
 
-Ao desligar o servidor, os dados adicionados são perdidos.
+Quando o servidor é reiniciado, os dados adicionados são perdidos.
 
-Por isso, substituímos o armazenamento no array pelo banco de dados utilizando Prisma.
+### Problema
 
-9° Passo — Importando o Prisma
+    Array → memória temporária → reiniciou o servidor → dados perdidos
 
-No início do teste.js, adicionamos:
+Para solucionar esse problema, foi utilizado um banco de dados.
 
-const prisma = require('./lib/prisma');
+---
 
-Essa linha importa a configuração do Prisma para que o teste.js possa acessar o banco de dados.
+## 3. Instalação das dependências
 
-10° Passo — CREATE: Cadastrar usuário
+Primeiro, foram instaladas as dependências necessárias:
 
-A rota POST /usuarios passou a utilizar o Prisma:
+    npm.cmd install prisma@7.10.0 @prisma/client@7.10.0
 
-app.post('/usuarios', async (req, res) => {
-    try {
-        const { nome, email } = req.body;
+Depois, foram instalados o SQLite e o adaptador utilizado pelo Prisma:
 
-        const novoUser = await prisma.usuario.create({
-            data: {
-                nome,
-                email
-            }
-        });
+    npm.cmd install better-sqlite3 @prisma/adapter-better-sqlite3
 
-        res.json(novoUser);
+### O que foi feito?
 
-    } catch (error) {
-        console.error(error);
+- `prisma`: ferramenta utilizada para trabalhar com o banco de dados.
+- `@prisma/client`: permite utilizar o Prisma dentro do código JavaScript.
+- `better-sqlite3`: permite a comunicação com o SQLite.
+- `@prisma/adapter-better-sqlite3`: conecta o Prisma ao Better SQLite3.
+
+---
+
+## 4. Inicializando o Prisma
+
+Foi utilizado o comando:
+
+    npx.cmd prisma init --datasource-provider sqlite
+
+Esse comando cria a estrutura inicial necessária para utilizar o Prisma.
+
+Arquivos principais:
+
+    prisma/
+    └── schema.prisma
+
+    .env
+
+    prisma.config.ts
+
+---
+
+## 5. Configuração do banco de dados
+
+No arquivo `.env`, foi configurado:
+
+    DATABASE_URL="file:./dev.db"
+
+### O que foi feito?
+
+Essa configuração informa ao Prisma que o banco de dados utilizado será um arquivo SQLite chamado `dev.db`.
+
+---
+
+## 6. Criando o Schema
+
+No arquivo:
+
+    prisma/schema.prisma
+
+foi definido o modelo `Usuario`:
+
+    generator client {
+      provider = "prisma-client-js"
     }
-});
 
-O método:
+    datasource db {
+      provider = "sqlite"
+    }
 
-create()
+    model Usuario {
+      id    Int    @id @default(autoincrement())
+      nome  String
+      email String @unique
+    }
 
-é utilizado para criar um novo registro no banco.
+### O que foi feito?
 
-Resumo
+O `schema.prisma` define a estrutura dos dados que serão armazenados no banco.
 
-Antes:
+Nesse caso, foi criado o modelo `Usuario`, contendo:
 
-POST → array
+| Campo | Tipo | Função |
+|---|---|---|
+| `id` | `Int` | Identificador do usuário |
+| `nome` | `String` | Nome do usuário |
+| `email` | `String` | E-mail do usuário |
 
-Depois:
+O campo `id` é gerado automaticamente e o `email` deve ser único.
 
-POST → Prisma → SQLite
-11° Passo — READ: Listar usuários
+---
 
-A rota GET /usuarios passou a buscar os dados no banco:
+## 7. Criando a Migration
 
-app.get('/usuarios', async (req, res) => {
-    try {
+Depois de configurar o `schema.prisma`, foi executado:
+
+    npx.cmd prisma migrate dev --name inicial
+
+A migration é responsável por aplicar no banco as alterações definidas no `schema.prisma`.
+
+O Prisma cria uma estrutura semelhante a:
+
+    prisma/
+    └── migrations/
+        └── 202..._inicial/
+            └── migration.sql
+
+### O que é a Migration?
+
+A migration registra e aplica as alterações feitas na estrutura do banco de dados.
+
+    schema.prisma
+           ↓
+       migration
+           ↓
+         SQLite
+
+O arquivo `migration.sql` é gerado automaticamente pelo Prisma e normalmente não precisa ser editado manualmente.
+
+---
+
+## 8. Gerando o Prisma Client
+
+Depois da migration, foi executado:
+
+    npx.cmd prisma generate
+
+Esse comando gera o Prisma Client que será utilizado no código JavaScript.
+
+---
+
+## 9. Criando a conexão com o Prisma
+
+Foi criado o arquivo:
+
+    lib/prisma.js
+
+Com o seguinte código:
+
+    require('dotenv').config();
+
+    const { PrismaClient } = require('@prisma/client');
+    const { PrismaBetterSqlite3 } = require('@prisma/adapter-better-sqlite3');
+
+    const adapter = new PrismaBetterSqlite3({
+        url: process.env.DATABASE_URL
+    });
+
+    const prisma = new PrismaClient({
+        adapter
+    });
+
+    module.exports = prisma;
+
+### O que foi feito?
+
+O arquivo `lib/prisma.js` configura o Prisma e sua conexão com o banco SQLite.
+
+Depois, essa configuração é exportada para que o arquivo principal possa utilizar o Prisma.
+
+---
+
+## 10. Importando o Prisma
+
+No arquivo `teste.js`, foi adicionado:
+
+    const prisma = require('./lib/prisma');
+
+### O que foi feito?
+
+Essa linha importa a configuração do Prisma para que as rotas possam realizar operações no banco de dados.
+
+---
+
+## 11. CREATE — Cadastrar usuário
+
+Antes, o usuário era adicionado ao array.
+
+Agora, o usuário é cadastrado no banco utilizando o Prisma:
+
+    app.post('/usuarios', async (req, res) => {
+        try {
+            const { nome, email } = req.body;
+
+            const novoUsuario = await prisma.usuario.create({
+                data: {
+                    nome: nome,
+                    email: email
+                }
+            });
+
+            res.json(novoUsuario);
+        } catch (error) {
+            console.error(error);
+        }
+    });
+
+### O que foi feito?
+
+O método `create()` cria um novo registro na tabela `Usuario` do banco SQLite.
+
+### Se o professor perguntar:
+
+**Por que usamos `create()`?**
+
+> Usamos o `create()` porque precisamos criar um novo registro no banco.
+
+---
+
+## 12. READ — Listar usuários
+
+Antes, os usuários eram buscados no array.
+
+Agora, os usuários são buscados diretamente no banco:
+
+    app.get('/usuarios', async (req, res) => {
         const usuarios = await prisma.usuario.findMany();
 
         res.json(usuarios);
+    });
 
-    } catch (error) {
-        console.error(error);
-    }
-});
+### O que foi feito?
 
-O método:
+O método `findMany()` busca vários registros da tabela `Usuario`.
 
-findMany()
+### Se o professor perguntar:
 
-é utilizado para buscar vários registros.
+**Por que usamos `findMany()`?**
 
-Resumo
+> O `findMany()` é utilizado para buscar vários registros da tabela.
 
-O GET deixou de consultar o array e passou a consultar diretamente o banco de dados.
+---
 
-12° Passo — UPDATE: Atualizar usuário
+## 13. UPDATE — Atualizar usuário
 
-A rota PUT /usuarios/:id utiliza:
+A rota de atualização passou a utilizar o método `update()`:
 
-app.put('/usuarios/:id', async (req, res) => {
-    try {
+    app.put('/usuarios/:id', async (req, res) => {
         const id = parseInt(req.params.id);
 
         const usuario = await prisma.usuario.update({
@@ -254,26 +277,29 @@ app.put('/usuarios/:id', async (req, res) => {
         });
 
         res.json(usuario);
+    });
 
-    } catch (error) {
-        console.error(error);
-    }
-});
+### O que foi feito?
 
-O método:
+O `update()` localiza o usuário pelo ID e altera os dados informados.
 
-update()
+O `where` indica qual registro será alterado.
 
-altera um registro existente.
+O `data` informa quais dados serão modificados.
 
-O where indica qual usuário será alterado e o data informa os novos dados.
+### Se o professor perguntar:
 
-13° Passo — DELETE: Excluir usuário
+**Qual a função do `where`?**
 
-A rota DELETE /usuarios/:id utiliza:
+> O `where` indica qual registro será localizado para realizar a alteração.
 
-app.delete('/usuarios/:id', async (req, res) => {
-    try {
+---
+
+## 14. DELETE — Excluir usuário
+
+A rota de exclusão passou a utilizar o método `delete()`:
+
+    app.delete('/usuarios/:id', async (req, res) => {
         const id = parseInt(req.params.id);
 
         const usuario = await prisma.usuario.delete({
@@ -283,146 +309,226 @@ app.delete('/usuarios/:id', async (req, res) => {
         });
 
         res.json(usuario);
+    });
 
-    } catch (error) {
-        console.error(error);
+### O que foi feito?
+
+O `delete()` remove do banco o registro correspondente ao ID informado.
+
+### Se o professor perguntar:
+
+**Como o usuário é localizado?**
+
+> O ID recebido pela URL é utilizado no `where` para localizar o usuário que será excluído.
+
+---
+
+## 15. Resumo do CRUD
+
+| Operação | Método Prisma | Função |
+|---|---|---|
+| CREATE | `create()` | Criar usuário |
+| READ | `findMany()` | Listar usuários |
+| UPDATE | `update()` | Alterar usuário |
+| DELETE | `delete()` | Excluir usuário |
+
+---
+
+## 16. Testando com o Thunder Client
+
+### Cadastrar usuário
+
+Método:
+
+    POST
+
+URL:
+
+    http://localhost:3001/usuarios
+
+Body:
+
+    {
+        "nome": "João",
+        "email": "joao@email.com"
     }
-});
 
-O método:
+### Listar usuários
 
-delete()
+Método:
 
-remove um registro do banco.
+    GET
 
-14° Passo — Resumo do CRUD
-Operação	HTTP	Prisma	Função
-Criar	POST	create()	Cadastrar usuário
-Ler	GET	findMany()	Listar usuários
-Atualizar	PUT	update()	Alterar usuário
-Excluir	DELETE	delete()	Remover usuário
-15° Passo — Testando com Thunder Client
+URL:
 
-As rotas podem ser testadas utilizando o Thunder Client.
+    http://localhost:3001/usuarios
 
-Cadastrar usuário
-POST http://localhost:3001/usuarios
+### Atualizar usuário
 
-Body:
+Método:
 
-{
-    "nome": "João",
-    "email": "joao@email.com"
-}
-Listar usuários
-GET http://localhost:3001/usuarios
-Atualizar usuário
-PUT http://localhost:3001/usuarios/1
+    PUT
+
+URL:
+
+    http://localhost:3001/usuarios/1
 
 Body:
 
-{
-    "nome": "João Atualizado",
-    "email": "joaoatualizado@email.com"
-}
-Excluir usuário
-DELETE http://localhost:3001/usuarios/1
-16° Passo — Testando a Persistência
+    {
+        "nome": "João Silva",
+        "email": "joaosilva@email.com"
+    }
 
-Para verificar se o banco realmente está mantendo os dados:
+### Excluir usuário
 
-Inicie o servidor.
-Cadastre um usuário.
-Consulte os usuários pelo GET.
-Encerre o servidor.
-Inicie o servidor novamente.
-Faça novamente o GET /usuarios.
+Método:
 
-O usuário continuará cadastrado.
+    DELETE
 
-Isso acontece porque agora os dados estão sendo armazenados no SQLite e não somente na memória da aplicação.
+URL:
 
-17° Passo — Comparação
-Antes do Prisma
-Thunder Client
-      ↓
-   Express
-      ↓
-Array usuarios[]
+    http://localhost:3001/usuarios/1
 
-Os dados ficavam apenas na memória.
+---
 
-Ao reiniciar o servidor:
+## 17. Teste de Persistência
 
-Dados perdidos
-Com Prisma
-Thunder Client
-      ↓
-   Express
-      ↓
-   Prisma
-      ↓
-   SQLite
-      ↓
-   dev.db
+Para verificar se a persistência está funcionando:
 
-Os dados ficam armazenados no banco.
+1. Cadastre um usuário pelo `POST /usuarios`.
+2. Verifique os usuários pelo `GET /usuarios`.
+3. Encerre o servidor.
+4. Inicie o servidor novamente.
+5. Faça novamente o `GET /usuarios`.
+
+Se o usuário continuar aparecendo, significa que os dados foram armazenados no banco.
+
+### Antes
+
+    Thunder Client
+          ↓
+        Express
+          ↓
+      usuarios[]
+          ↓
+       Memória
 
 Ao reiniciar o servidor:
 
-Dados continuam salvos
-18° Passo — Principais conceitos
-Prisma
+    Dados perdidos
 
-Ferramenta utilizada para facilitar a comunicação entre a aplicação e o banco de dados.
+### Depois
 
-Prisma Client
+    Thunder Client
+          ↓
+        Express
+          ↓
+        Prisma
+          ↓
+        SQLite
+          ↓
+       dev.db
 
-Permite realizar operações no banco através do código JavaScript.
+Ao reiniciar o servidor:
 
-SQLite
+    Dados continuam disponíveis
 
-Banco de dados utilizado neste projeto para armazenar os usuários.
+---
 
-Migration
+## 18. Arquivos utilizados
 
-Processo que aplica no banco as alterações definidas no schema.prisma.
+    tutorial_persistencia/
+    │
+    ├── lib/
+    │   └── prisma.js
+    │
+    ├── prisma/
+    │   ├── migrations/
+    │   │   └── ..._inicial/
+    │   │       └── migration.sql
+    │   │
+    │   └── schema.prisma
+    │
+    ├── .env
+    ├── prisma.config.ts
+    ├── teste.js
+    ├── package.json
+    └── dev.db
 
-Schema
+| Arquivo | Função |
+|---|---|
+| `schema.prisma` | Define a estrutura dos dados |
+| `migration.sql` | Registra a alteração aplicada ao banco |
+| `.env` | Define a localização do banco |
+| `prisma.config.ts` | Configura o Prisma |
+| `lib/prisma.js` | Configura a conexão do Prisma |
+| `teste.js` | Contém as rotas da aplicação |
+| `dev.db` | Banco de dados SQLite |
 
-Arquivo que define a estrutura dos dados que serão armazenados.
+---
 
-Driver
+## 19. Principais conceitos
 
-O better-sqlite3 funciona como driver para permitir a comunicação com o SQLite.
+### Persistência
 
-Resumo do fluxo
-1. Instalar dependências
-        ↓
-2. Inicializar Prisma
-        ↓
-3. Configurar .env
-        ↓
-4. Criar schema.prisma
-        ↓
-5. Executar migration
-        ↓
-6. Gerar Prisma Client
-        ↓
-7. Configurar lib/prisma.js
-        ↓
-8. Alterar as rotas do teste.js
-        ↓
-9. Testar CRUD
-        ↓
-10. Testar persistência
-Conclusão
+É a capacidade de manter os dados mesmo depois que a aplicação é encerrada.
 
-Neste tutorial foi apresentada a evolução do armazenamento de dados de uma aplicação Express.
+### Banco de dados
 
-Inicialmente, os usuários eram armazenados em um array, fazendo com que os dados fossem perdidos quando o servidor era reiniciado.
+É responsável por armazenar os dados de forma permanente.
 
-Com a utilização do Prisma + SQLite, os dados passaram a ser armazenados de forma persistente, permitindo realizar as operações de criação, leitura, atualização e exclusão (CRUD) diretamente no banco de dados.
+### SQLite
 
+É o banco de dados utilizado neste projeto.
 
-**Eu acho que esse formato combina bem com o README do Grupo 1**, porque mantém a idei
+### Prisma
+
+É a ferramenta utilizada para facilitar a comunicação entre a aplicação e o banco de dados.
+
+### ORM
+
+O Prisma funciona como um ORM, permitindo trabalhar com o banco utilizando JavaScript.
+
+### Migration
+
+É o processo utilizado para aplicar alterações da estrutura definida no `schema.prisma` ao banco de dados.
+
+### Schema
+
+É a definição da estrutura dos dados que serão armazenados.
+
+---
+
+## 20. Fluxo final
+
+    Usuário
+       ↓
+    Thunder Client
+       ↓
+    Express
+       ↓
+    Rotas
+       ↓
+    Prisma
+       ↓
+    SQLite
+       ↓
+    dev.db
+
+Dessa forma, a aplicação deixou de armazenar os usuários somente em memória e passou a utilizar um banco de dados, permitindo que os dados permaneçam disponíveis mesmo após o encerramento e reinício do servidor.
+
+---
+
+## 21. Conclusão
+
+A implementação da persistência permitiu substituir o armazenamento temporário em um array pelo armazenamento permanente utilizando Prisma e SQLite.
+
+Com isso, as operações de cadastro, consulta, atualização e exclusão passaram a ser realizadas diretamente no banco de dados através dos métodos:
+
+    create()
+    findMany()
+    update()
+    delete()
+
+O principal resultado foi garantir que os dados dos usuários não sejam perdidos quando o servidor é reiniciado.
