@@ -8,7 +8,6 @@ Guia passo a passo para implementar persistência de dados em uma aplicação **
 
 Execute os comandos abaixo na raiz do projeto:
 
-```bash
 # Instalação do Prisma e do Prisma Client
 npm install prisma@7.10.0 @prisma/client@7.10.0
 
