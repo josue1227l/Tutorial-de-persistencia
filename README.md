@@ -19,7 +19,8 @@ prisma	Ferramenta ORM utilizada para trabalhar com o banco de dados
 @prisma/client	Permite realizar operações no banco através do código JavaScript
 better-sqlite3	Driver utilizado para comunicação com o SQLite
 @prisma/adapter-better-sqlite3	Adaptador que conecta o Prisma ao Better SQLite3
-2° Passo — Inicializando o Prisma
+
+## 2° Passo — Inicializando o Prisma
 
 Execute:
 
@@ -34,7 +35,8 @@ prisma/
 
 .env
 prisma7.config.ts
-3° Passo — Configurando o banco de dados
+
+## 3° Passo — Configurando o banco de dados
 
 No arquivo .env, configure a URL do banco:
 
@@ -44,7 +46,7 @@ O arquivo .env armazena configurações utilizadas pela aplicação.
 
 Nesse projeto, DATABASE_URL informa onde está localizado o banco SQLite.
 
-4° Passo — Criando o Schema
+## 4° Passo — Criando o Schema
 
 No arquivo:
 
@@ -83,7 +85,7 @@ Faz o ID ser gerado automaticamente.
 
 Impede que dois usuários tenham o mesmo e-mail.
 
-5° Passo — Criando a Migration
+## 5° Passo — Criando a Migration
 
 Depois de definir o modelo, execute:
 
